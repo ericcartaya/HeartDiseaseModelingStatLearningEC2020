@@ -1,0 +1,82 @@
+---
+title: "MSDS 534 Statistical Learning Project (11/11/2020)"
+author: "Christopher Rabeony"
+date: "11/16/2020"
+output:
+  word_document: default
+  html_document: default
+---
+## Data Attributes
+* `age` - age in years.
+* `sex` - gender (0 = male; 1 = female)
+* `cp` - chest pain type 
+    + `1` = typical agina 
+    + `2` = atyptical angina 
+    + `3` = non-anginal pain
+    + `4` = asymptomatic
+* `trestbps` - resting blood pressure (in mm HG)
+* `chol` - serum cholestoral in mg/dl
+* `fbs` - fasting blood sugar > 120 mg/dl (0 = false; 1 = true)
+* `restecg` - resting electrocardiographic results
+    + `0` = normal 
+    + `1` = having ST-T Wave abnormal (T wave inversions and/or ST elevation or depression of > 005 mV)  
+    + `2` = showing probable or definite left vetricular hyptertropy
+* `thalach` - maximum heart rate achieved in beats per minute (bpm)
+* `exang` - exercise induced angina (0 = no; 1 = yes)
+* `oldpeak` - ST depression induced by exercise relative to rest
+* `slope` - the slope of the peak exercise ST segment
+    + `1` - upsloping
+    + `2` - flat
+    + `3` - down-sloping
+* `ca` - number of major vessels (0-3) colored by fluoroscopy
+* `thal` - displays the thalassemia
+    + `3` = normal 
+    + `6` = fixed defect 
+    + `7` = reversible defect
+* `goal` - predicted target variable. Diagnosis of heart disease (angiographic disease status) 
+    + `0` = < 50% diameter narrowing 
+    + `1` = > 50% diameter narrowing)
+
+```{r}
+# Set up libraries
+#library(pastecs)
+# Definition for clean tables
+#options(scipen=100)
+#options(digits=3)
+# Read the data into a data frame
+heart <- read.csv("E:/School/Statistical Learning for Data Science/Project/processed.cleveland (1).data", header = F)
+```
+
+#### Clean up our data.
+```{r, warning=FALSE}
+names(heart) <- c("age", "sex", "cp", "trestbps", "chol", "fbs", "restecg", "thalach", "exang", "oldpeak", "slope", "ca", "thal", "goal")#naming columns for convenience
+heart$ca <- as.integer(heart$ca)# manipulating the data for analysis
+heart$thal <- as.integer(heart$thal)
+heart$goal[heart$goal == 2] <- 1
+heart$goal[heart$goal == 3] <- 1
+heart$goal[heart$goal == 4] <- 1
+summary(heart)# checking mean, meadian, and number of NAs in table
+sapply(heart, sd, na.rm = TRUE)# checking standard deviations in table
+
+heart_matrix <- matrix(unlist(na.omit(heart)), nrow = 297, ncol= 14)# setting up for mass independence testing
+colnames(heart_matrix) <- c("age", "sex", "cp", "trestbps", "chol", "fbs", "restecg", "thalach", "exang", "oldpeak", "slope", "ca", "thal", "goal")
+ind<-combn(NCOL(heart_matrix),2) # setting up combinations for testing indepence
+
+heartchi <- apply(ind, 2, function(ind) chisq.test(heart_matrix[, ind[1]], heart_matrix[, ind[2]]))# perfoming chi square indpendence tests
+heartchip <- data.frame(heartchi[[1]]$p.value)# extracting pvalue to start data fram
+heartchip
+
+for(i in 2:NROW(heartchi))# filling out table using loop
+{
+    heartchip <- cbind(heartchip, heartchi[[i]]$p.value)
+}
+heartchip <- t(heartchip)# transposing loop for formatting
+
+heartchi2<-cbind(t(ind), heartchi)# combining relevant tables for final display
+heartchi2<-cbind(heartchi2, heartchip[,1])
+heartchi2 #final product
+
+lmheart <- glm(goal~., heart, family = "binomial")# creating basic, preliminary logistic model
+summary(lmheart)
+```
+
